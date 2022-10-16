@@ -19,6 +19,7 @@ class SpyroData:
         self.file_name = file_name
         self.folder_location = folder_location
         self.feed_composition = FeedComposition()
+        self.spyro_exe_location = r"C:\\Program files (64 bit)\\Spyro EFPS\\"
 
     def get_file_name(self):
         return self.file_name
@@ -301,7 +302,7 @@ class FeedComposition:
 
 class EffluentComposition:
     def __init__(self):
-
+        pass
 
 def read_naphtha_spyro_converter(file_name, log=False):
     """read_naphtha_spyro_converter.
