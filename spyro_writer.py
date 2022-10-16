@@ -19,19 +19,12 @@ class SpyroData:
         self.file_name = file_name
         self.folder_location = folder_location
         self.feed_composition = FeedComposition()
-        self.spyro_exe_location = r"C:\\Program files (64 bit)\\Spyro EFPS\\"
 
     def get_file_name(self):
         return self.file_name
 
-    def set_file_name(self, file_name):
-        self.file_name = file_name
-
     def get_spyro_exe_location(self):
         return self.spyro_exe_location
-
-    def set_spyro_exe_location(self, spyro_exe_location):
-        self.spyro_exe_location = spyro_exe_location
 
     def get_folder_location(self):
         return self.folder_location
@@ -48,6 +41,18 @@ class SpyroData:
         self.feed_composition.set_feed_composition(
             feed_pitagor, feed_converter
         )
+
+    def set_file_name(self, file_name):
+        self.file_name = file_name
+
+    def set_spyro_exe_location(self, spyro_exe_location):
+        self.spyro_exe_location = spyro_exe_location
+
+    def write_spyro(self):
+        # copy the example file in the folder location with new folder and name
+        # find the keywords to change with the data in self
+        # close the newly file copied from the example file
+        pass
 
     def create_naphtha_line(self, ecf_dat):
         """create_naphtha_line.
@@ -296,7 +301,6 @@ class FeedComposition:
 
 class EffluentComposition:
     def __init__(self):
-        pass
 
 
 def read_naphtha_spyro_converter(file_name, log=False):
