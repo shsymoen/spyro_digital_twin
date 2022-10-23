@@ -1,5 +1,5 @@
 class SpyroData:
-    def __init__(self, file_name, folder_location):
+    def __init__(self, file_name, folder_location, base_folder="base"):
         """Constructor
 
         Parameters
@@ -8,6 +8,8 @@ class SpyroData:
             string with the simulation file name
         folder_location :
             string with the folder file name
+        base_folder :
+            string with base folder and file name, default: base
 
         Objects
         -------
@@ -15,11 +17,32 @@ class SpyroData:
             DataFrame which is constructed by the transform_naphtha_feed
             function
         """
+        import os
 
+        # File name of the spyro .dat file
+        # The file name and the dedicated folder should have the same name
         self.file_name = file_name
+        # The folder where the files are stored
         self.folder_location = folder_location
+        # Class that has all information on the feed composition
         self.feed_composition = FeedComposition()
+        # Class that has all information on the effluent composition
+        self.effluent_composition = EffluentComposition()
+        # String where the exe file of Spyro is located
         self.spyro_exe_location = r"C:\\Program files (64 bit)\\Spyro EFPS\\"
+        # Spyro exe name
+        self.spyro_exe_name = r"EFPS68.exe"
+        # Exact name for spyro execution
+        self.spyro_exe_loc_name = os.path.join(
+            self.spyro_exe_location, self.spyro_exe_name
+        )
+        # folder name that can be used to copy the .dat file as example
+        self.base_folder = os.path.join(self.folder_location, "base")
+        # specific folder where the file is stored. Same name as the .dat
+        # file
+        self.file_name_folder = os.path.join(
+            self.folder_location, self.file_name
+        )
 
     def get_file_name(self):
         return self.file_name
@@ -50,10 +73,129 @@ class SpyroData:
         self.spyro_exe_location = spyro_exe_location
 
     def write_spyro(self):
+        import os
+        import shutil
+
+        cwd = os.getcwd()
+
         # copy the example file in the folder location with new folder and name
+        src = self.base_folder
+        dst = self.file_name_folder
+        try:
+            # if path already exists, remove it before copying with copytree()
+            if os.path.exists(dst):
+                shutil.rmtree(dst)
+            shutil.copytree(src, dst)
+        except OSError as e:
+            print("Directory not copied. Error: %s" % e)
+
+        os.chdir(self.file_name_folder)
         # find the keywords to change with the data in self
         # close the newly file copied from the example file
-        pass
+        print(
+            "spyro files created in folder: {}".format(self.file_name_folder)
+        )
+
+        os.chdir(cwd)
+
+    def read_spyro_output(self):
+        import re
+
+        import pandas as pd
+
+        effl_df = 0
+        with open("{}.eof".format(self.get_file_name()), "r") as output_file:
+            f_str = output_file.read()
+            effl_start_semi = f_str.rfind("[EFFLUENT]")
+            effl_start = f_str.find(" ", effl_start_semi)
+            effl_end = f_str.rfind("[EFFLUENT END]")
+            effl_str = f_str[effl_start + 1 : effl_end]
+            # print(effl_str)
+            d = re.findall(r"([^\s]+)\s([0-9\.]+)", effl_str)
+            effl_df = pd.DataFrame(d, columns=["Component", "Value"])
+            effl_df = effl_df.set_index("Component")
+            effl_df["Value"].astype("float64")
+
+        effluent = {}
+        effluent_list = [
+            "wt",
+            "vol",
+            "RC4",
+            "RC4-pygas",
+            "Pygas",
+            "H/C ratio",
+            "MW",
+            "misc",
+        ]
+        for effluent_sublist in effluent_list:
+            effluent[effluent_sublist] = {}
+
+        for component in effl_df.index:
+            if component[0] == "W":
+                effluent["wt"][component[1:]] = effl_df.loc[component, "Value"]
+            elif component[0] == "V":
+                effluent["vol"][component[1:]] = effl_df.loc[
+                    component, "Value"
+                ]
+            elif component[0] == "R":
+                effluent["RC4-pygas"][component[1:]] = effl_df.loc[
+                    component, "Value"
+                ]
+            elif component[0:2] == "HC":
+                effluent["H/C ratio"][component[2:]] = effl_df.loc[
+                    component, "Value"
+                ]
+            elif component[0:2] == "MW":
+                effluent["MW"][component[2:]] = effl_df.loc[component, "Value"]
+            else:
+                effluent["misc"][component] = effl_df.loc[component, "Value"]
+
+            for effluent_sub in effluent:
+                effluent[effluent_sub] = pd.Series(
+                    effluent[effluent_sub]
+                ).astype("float64")
+
+            raw_c4_comps = [
+                "C4H4",
+                "BUTAD",
+                "B1",
+                "B2C",
+                "B2T",
+                "IB",
+                "NBUTA",
+                "IBUTA",
+            ]
+            effluent["RC4"] = effluent["RC4-pygas"].loc[raw_c4_comps]
+            effluent["Pygas"] = effluent["RC4-pygas"].loc[
+                ~effluent["RC4-pygas"].index.isin(raw_c4_comps)
+            ]
+
+    def run_spyro(self, verbose=True):
+        """run_spyro.
+        Runs Spyro EFPS in the self.folder_location
+
+        Parameters
+        ----------
+        verbose :
+            boolean to indicate whether to print the spyro output and errors
+            or not.
+        """
+        import os
+        import subprocess
+
+        cwd = os.getcwd()
+        os.chdir(self.folder_location)
+        process = subprocess.Popen(
+            [self.spyro_exe_loc_name, self.file_name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            #     executable=True,
+        )
+        stdout, stderr = process.communicate()
+        if verbose:
+            print(stdout.decode())
+            print(stderr.decode())
+        os.chdir(cwd)
 
     def create_naphtha_line(self, ecf_dat):
         """create_naphtha_line.
@@ -77,7 +219,10 @@ class SpyroData:
             self.naphtha_line_string += (
                 "   "
                 + ", ".join(
-                    "{}={:}".format(key, value,)
+                    "{}={:}".format(
+                        key,
+                        value,
+                    )
                     for key, value in feed_comp_wt_dct.items()
                 )
                 + ", END"
@@ -156,6 +301,8 @@ class FeedComposition:
         self.feed_composition_df = feed_pitagor
 
     def piona_processor(self):
+        import pandas as pd
+
         naphtha_piona_converter = self.translator_df.set_index("Spyro_name")
 
         # Remove duplicate indices and take only the PIONA column
@@ -164,7 +311,10 @@ class FeedComposition:
         ]["PIONA"]
         # Add PIONA to the naphtha composition
         feed_comp_wt_piona_test = (
-            pd.concat([self.feed_comp_wt, naphtha_piona_converter], axis=1,)
+            pd.concat(
+                [self.feed_comp_wt, naphtha_piona_converter],
+                axis=1,
+            )
             .reindex(self.feed_comp_wt.index)
             .fillna(0)
         )
@@ -195,10 +345,15 @@ class FeedComposition:
         dct_piona = {}
         for key, value in dct_piona_list.items():
             dct_piona[value] = [
-                round(piona_comp.loc[key, "VALEUR"], ndigits=2,),
+                round(
+                    piona_comp.loc[key, "VALEUR"],
+                    ndigits=2,
+                ),
                 round(piona_feed.loc[value], ndigits=2),
             ]
-        self.df_piona = pd.DataFrame(dct_piona,).transpose()
+        self.df_piona = pd.DataFrame(
+            dct_piona,
+        ).transpose()
         self.df_piona.columns = ["Calculated", "Analysed"]
 
         # Calculate the difference between analysed and calculated.
@@ -252,7 +407,7 @@ class FeedComposition:
 
         # Change the naphtha file name to Spyro specific component name
         self.feed_comp_wt = self.feed_comp_wt_sub.replace(
-            naphtha_converter["Spyro_name"].to_dict()
+            self.translator_df["Spyro_name"].to_dict()
         ).set_index("DESCRIPTION COMPOSANT")["VALEUR"]
         self.feed_comp_wt = self.feed_comp_wt.replace(
             to_replace="<0.50", value=0
@@ -303,6 +458,17 @@ class FeedComposition:
 class EffluentComposition:
     def __init__(self):
         pass
+        EFFLUENT_LIST = [
+            "wt",
+            "vol",
+            "RC4",
+            "RC4-pygas",
+            "Pygas",
+            "H/C ratio",
+            "MW",
+            "misc",
+        ]
+
 
 def read_naphtha_spyro_converter(file_name, log=False):
     """read_naphtha_spyro_converter.
@@ -348,32 +514,3 @@ def read_naphtha_spyro_converter(file_name, log=False):
     print("Converter file saved.")
 
     return nafta_converter
-
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import pandas as pd
-
-    feed_comp = pd.read_excel(
-        "Samples Naphtha2.xlsx",
-        skiprows=8,
-        sheet_name=None,
-        parse_dates=True,
-        na_values=["<0.50"],
-    )
-
-    file_name = "naphtha_converter_TRAlab_Spyro.xlsx"
-    naphtha_converter = read_naphtha_spyro_converter(file_name)
-
-    spyro_data = {}
-    for i, feed_name in enumerate(feed_comp):
-        spyro_data[i] = SpyroData(feed_name, ".")
-
-        feed_comp_test = feed_comp[feed_name]
-        spyro_data[i].set_feed_composition(
-            feed_pitagor=feed_comp_test, feed_converter=naphtha_converter
-        )
-        spyro_data[i].feed_composition.transform_naphtha_feed()
-
-        print(spyro_data[i].create_naphtha_line(ecf_dat="dat"))
