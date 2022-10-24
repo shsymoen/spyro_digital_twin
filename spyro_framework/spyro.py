@@ -74,6 +74,7 @@ class SpyroData:
 
     def write_spyro(self):
         import os
+        import re
         import shutil
 
         cwd = os.getcwd()
@@ -90,8 +91,18 @@ class SpyroData:
             print("Directory not copied. Error: %s" % e)
 
         os.chdir(self.file_name_folder)
+
         # find the keywords to change with the data in self
+        base_file = open("base.dat", "r")
+        f_str = base_file.read()
+        feed_replacement_string = self.create_naphtha_line()
+        f_str = re.sub("KEYW=&NAME\n.*END", feed_replacement_string, f_str)
+        base_file.close()
+        # overwrite the base file with the new feed line
+        converted_file = open("{}.dat".format(self.get_file_name()), "w")
+        converted_file.write(f_str)
         # close the newly file copied from the example file
+        converted_file.close()
         print(
             "spyro files created in folder: {}".format(self.file_name_folder)
         )
@@ -99,76 +110,7 @@ class SpyroData:
         os.chdir(cwd)
 
     def read_spyro_output(self):
-        import re
-
-        import pandas as pd
-
-        effl_df = 0
-        with open("{}.eof".format(self.get_file_name()), "r") as output_file:
-            f_str = output_file.read()
-            effl_start_semi = f_str.rfind("[EFFLUENT]")
-            effl_start = f_str.find(" ", effl_start_semi)
-            effl_end = f_str.rfind("[EFFLUENT END]")
-            effl_str = f_str[effl_start + 1 : effl_end]
-            # print(effl_str)
-            d = re.findall(r"([^\s]+)\s([0-9\.]+)", effl_str)
-            effl_df = pd.DataFrame(d, columns=["Component", "Value"])
-            effl_df = effl_df.set_index("Component")
-            effl_df["Value"].astype("float64")
-
-        effluent = {}
-        effluent_list = [
-            "wt",
-            "vol",
-            "RC4",
-            "RC4-pygas",
-            "Pygas",
-            "H/C ratio",
-            "MW",
-            "misc",
-        ]
-        for effluent_sublist in effluent_list:
-            effluent[effluent_sublist] = {}
-
-        for component in effl_df.index:
-            if component[0] == "W":
-                effluent["wt"][component[1:]] = effl_df.loc[component, "Value"]
-            elif component[0] == "V":
-                effluent["vol"][component[1:]] = effl_df.loc[
-                    component, "Value"
-                ]
-            elif component[0] == "R":
-                effluent["RC4-pygas"][component[1:]] = effl_df.loc[
-                    component, "Value"
-                ]
-            elif component[0:2] == "HC":
-                effluent["H/C ratio"][component[2:]] = effl_df.loc[
-                    component, "Value"
-                ]
-            elif component[0:2] == "MW":
-                effluent["MW"][component[2:]] = effl_df.loc[component, "Value"]
-            else:
-                effluent["misc"][component] = effl_df.loc[component, "Value"]
-
-            for effluent_sub in effluent:
-                effluent[effluent_sub] = pd.Series(
-                    effluent[effluent_sub]
-                ).astype("float64")
-
-            raw_c4_comps = [
-                "C4H4",
-                "BUTAD",
-                "B1",
-                "B2C",
-                "B2T",
-                "IB",
-                "NBUTA",
-                "IBUTA",
-            ]
-            effluent["RC4"] = effluent["RC4-pygas"].loc[raw_c4_comps]
-            effluent["Pygas"] = effluent["RC4-pygas"].loc[
-                ~effluent["RC4-pygas"].index.isin(raw_c4_comps)
-            ]
+        self.effluent_composition.read_effluent(self.get_file_name())
 
     def run_spyro(self, verbose=True):
         """run_spyro.
@@ -197,12 +139,12 @@ class SpyroData:
             print(stderr.decode())
         os.chdir(cwd)
 
-    def create_naphtha_line(self, ecf_dat):
+    def create_naphtha_line(self, ecf_dat="dat"):
         """create_naphtha_line.
 
         ecf_dat :
-            string indicating either ecf or dat to indicate in which format the
-            naphtha feed line should be printed
+            string indicating either ecf or dat to indicate in which file
+            format the naphtha feed line should be printed. Default (.dat)
 
         Returns
         -------
@@ -219,10 +161,7 @@ class SpyroData:
             self.naphtha_line_string += (
                 "   "
                 + ", ".join(
-                    "{}={:}".format(
-                        key,
-                        value,
-                    )
+                    "{}={:}".format(key, value,)
                     for key, value in feed_comp_wt_dct.items()
                 )
                 + ", END"
@@ -311,10 +250,7 @@ class FeedComposition:
         ]["PIONA"]
         # Add PIONA to the naphtha composition
         feed_comp_wt_piona_test = (
-            pd.concat(
-                [self.feed_comp_wt, naphtha_piona_converter],
-                axis=1,
-            )
+            pd.concat([self.feed_comp_wt, naphtha_piona_converter], axis=1,)
             .reindex(self.feed_comp_wt.index)
             .fillna(0)
         )
@@ -345,15 +281,10 @@ class FeedComposition:
         dct_piona = {}
         for key, value in dct_piona_list.items():
             dct_piona[value] = [
-                round(
-                    piona_comp.loc[key, "VALEUR"],
-                    ndigits=2,
-                ),
+                round(piona_comp.loc[key, "VALEUR"], ndigits=2,),
                 round(piona_feed.loc[value], ndigits=2),
             ]
-        self.df_piona = pd.DataFrame(
-            dct_piona,
-        ).transpose()
+        self.df_piona = pd.DataFrame(dct_piona,).transpose()
         self.df_piona.columns = ["Calculated", "Analysed"]
 
         # Calculate the difference between analysed and calculated.
@@ -458,7 +389,28 @@ class FeedComposition:
 class EffluentComposition:
     def __init__(self):
         pass
-        EFFLUENT_LIST = [
+
+    def read_effluent(self, file_name, verbose=False):
+        import re
+
+        import pandas as pd
+
+        effl_df = 0
+        with open("{}.eof".format(file_name), "r") as output_file:
+            f_str = output_file.read()
+            effl_start_semi = f_str.rfind("[EFFLUENT]")
+            effl_start = f_str.find(" ", effl_start_semi)
+            effl_end = f_str.rfind("[EFFLUENT END]")
+            effl_str = f_str[effl_start + 1 : effl_end]
+            if verbose:
+                print(effl_str)
+            d = re.findall(r"([^\s]+)\s([0-9\.]+)", effl_str)
+            effl_df = pd.DataFrame(d, columns=["Component", "Value"])
+            effl_df = effl_df.set_index("Component")
+            effl_df["Value"].astype("float64")
+
+        effluent = {}
+        effluent_list = [
             "wt",
             "vol",
             "RC4",
@@ -468,6 +420,51 @@ class EffluentComposition:
             "MW",
             "misc",
         ]
+        for effluent_sublist in effluent_list:
+            effluent[effluent_sublist] = {}
+
+        for component in effl_df.index:
+            if component[0] == "W":
+                effluent["wt"][component[1:]] = effl_df.loc[component, "Value"]
+            elif component[0] == "V":
+                effluent["vol"][component[1:]] = effl_df.loc[
+                    component, "Value"
+                ]
+            elif component[0] == "R":
+                effluent["RC4-pygas"][component[1:]] = effl_df.loc[
+                    component, "Value"
+                ]
+            elif component[0:2] == "HC":
+                effluent["H/C ratio"][component[2:]] = effl_df.loc[
+                    component, "Value"
+                ]
+            elif component[0:2] == "MW":
+                effluent["MW"][component[2:]] = effl_df.loc[component, "Value"]
+            else:
+                effluent["misc"][component] = effl_df.loc[component, "Value"]
+
+            for effluent_sub in effluent:
+                effluent[effluent_sub] = pd.Series(
+                    effluent[effluent_sub]
+                ).astype("float64")
+
+            raw_c4_comps = [
+                "C4H4",
+                "BUTAD",
+                "B1",
+                "B2C",
+                "B2T",
+                "IB",
+                "NBUTA",
+                "IBUTA",
+            ]
+            effluent["RC4"] = effluent["RC4-pygas"].loc[raw_c4_comps]
+            effluent["Pygas"] = effluent["RC4-pygas"].loc[
+                ~effluent["RC4-pygas"].index.isin(raw_c4_comps)
+            ]
+
+            if verbose:
+                print("Effluent succesfully read from Spyro output file")
 
 
 def read_naphtha_spyro_converter(file_name, log=False):
