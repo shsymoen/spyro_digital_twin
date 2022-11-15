@@ -35,6 +35,9 @@ def main():
         spyro_data[i].feed_composition.transform_naphtha_feed()
         spyro_data[i].write_spyro()
 
+    for spyro_simulation in spyro_data:
+        spyro_simulation.run_spyro()
+
 
 if __name__ == "__main__":
     main()
