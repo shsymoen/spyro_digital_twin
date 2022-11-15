@@ -33,9 +33,6 @@ def main():
             feed_pitagor=feed_comp_test, feed_converter=naphtha_converter
         )
         spyro_data[i].feed_composition.transform_naphtha_feed()
-
-        print(spyro_data[i].create_naphtha_line(ecf_dat="dat"))
-
         spyro_data[i].write_spyro()
 
 
