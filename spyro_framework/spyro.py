@@ -77,32 +77,31 @@ class SpyroData:
         import re
         import shutil
 
+        # Change to current working directory
         cwd = os.getcwd()
 
         # copy the example file in the folder location with new folder and name
-        src = self.base_folder
-        dst = self.file_name_folder
-        try:
-            # if path already exists, remove it before copying with copytree()
-            if os.path.exists(dst):
-                shutil.rmtree(dst)
-            shutil.copytree(src, dst)
-        except OSError as e:
-            print("Directory not copied. Error: %s" % e)
-
+        src = os.path.join(self.base_folder, "base.dat")
+        dst = os.path.join(
+            self.file_name_folder, "{}.dat".format(self.get_file_name())
+        )
+        # Create destination folder
+        if not os.path.exists(self.file_name_folder):
+            os.mkdir(self.file_name_folder)
+        shutil.copy2(src, dst)
         os.chdir(self.file_name_folder)
 
         # find the keywords to change with the data in self
-        base_file = open("base.dat", "r")
-        f_str = base_file.read()
+        file_to_change = open("{}.dat".format(self.get_file_name()), "r")
+        f_str = file_to_change.read()
         feed_replacement_string = self.create_naphtha_line()
         f_str = re.sub("KEYW=&NAME\n.*END", feed_replacement_string, f_str)
-        base_file.close()
+        file_to_change.close()
         # overwrite the base file with the new feed line
-        converted_file = open("{}.dat".format(self.get_file_name()), "w")
-        converted_file.write(f_str)
+        file_changed = open("{}.dat".format(self.get_file_name()), "w")
+        file_changed.write(f_str)
         # close the newly file copied from the example file
-        converted_file.close()
+        file_changed.close()
         print(
             "spyro files created in folder: {}".format(self.file_name_folder)
         )
@@ -161,7 +160,10 @@ class SpyroData:
             self.naphtha_line_string += (
                 "   "
                 + ", ".join(
-                    "{}={:}".format(key, value,)
+                    "{}={:}".format(
+                        key,
+                        value,
+                    )
                     for key, value in feed_comp_wt_dct.items()
                 )
                 + ", END"
@@ -250,7 +252,10 @@ class FeedComposition:
         ]["PIONA"]
         # Add PIONA to the naphtha composition
         feed_comp_wt_piona_test = (
-            pd.concat([self.feed_comp_wt, naphtha_piona_converter], axis=1,)
+            pd.concat(
+                [self.feed_comp_wt, naphtha_piona_converter],
+                axis=1,
+            )
             .reindex(self.feed_comp_wt.index)
             .fillna(0)
         )
@@ -281,10 +286,15 @@ class FeedComposition:
         dct_piona = {}
         for key, value in dct_piona_list.items():
             dct_piona[value] = [
-                round(piona_comp.loc[key, "VALEUR"], ndigits=2,),
+                round(
+                    piona_comp.loc[key, "VALEUR"],
+                    ndigits=2,
+                ),
                 round(piona_feed.loc[value], ndigits=2),
             ]
-        self.df_piona = pd.DataFrame(dct_piona,).transpose()
+        self.df_piona = pd.DataFrame(
+            dct_piona,
+        ).transpose()
         self.df_piona.columns = ["Calculated", "Analysed"]
 
         # Calculate the difference between analysed and calculated.
