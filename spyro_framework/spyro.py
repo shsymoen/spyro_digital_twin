@@ -29,7 +29,7 @@ class SpyroData:
         # Class that has all information on the effluent composition
         self.effluent_composition = EffluentComposition()
         # String where the exe file of Spyro is located
-        self.spyro_exe_location = r"C:\\Program files (64 bit)\\Spyro EFPS\\"
+        self.spyro_exe_location = r"C:\\Program Files (x86)\\Pyrotec\\EFPS86\\"
         # Spyro exe name
         self.spyro_exe_name = r"EFPS68.exe"
         # Exact name for spyro execution
@@ -125,9 +125,9 @@ class SpyroData:
         import subprocess
 
         cwd = os.getcwd()
-        os.chdir(self.folder_location)
+        os.chdir(os.path.join(self.folder_location, self.file_name))
         process = subprocess.Popen(
-            [self.spyro_exe_loc_name, self.file_name],
+            [self.spyro_exe_loc_name, self.file_name + ".dat"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             #     executable=True,
@@ -160,10 +160,7 @@ class SpyroData:
             self.naphtha_line_string += (
                 "   "
                 + ", ".join(
-                    "{}={:}".format(
-                        key,
-                        value,
-                    )
+                    "{}={:}".format(key, value,)
                     for key, value in feed_comp_wt_dct.items()
                 )
                 + ", END"
@@ -252,10 +249,7 @@ class FeedComposition:
         ]["PIONA"]
         # Add PIONA to the naphtha composition
         feed_comp_wt_piona_test = (
-            pd.concat(
-                [self.feed_comp_wt, naphtha_piona_converter],
-                axis=1,
-            )
+            pd.concat([self.feed_comp_wt, naphtha_piona_converter], axis=1,)
             .reindex(self.feed_comp_wt.index)
             .fillna(0)
         )
@@ -286,15 +280,10 @@ class FeedComposition:
         dct_piona = {}
         for key, value in dct_piona_list.items():
             dct_piona[value] = [
-                round(
-                    piona_comp.loc[key, "VALEUR"],
-                    ndigits=2,
-                ),
+                round(piona_comp.loc[key, "VALEUR"], ndigits=2,),
                 round(piona_feed.loc[value], ndigits=2),
             ]
-        self.df_piona = pd.DataFrame(
-            dct_piona,
-        ).transpose()
+        self.df_piona = pd.DataFrame(dct_piona,).transpose()
         self.df_piona.columns = ["Calculated", "Analysed"]
 
         # Calculate the difference between analysed and calculated.
