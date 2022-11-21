@@ -1,0 +1,75 @@
+  TERMINATED DUE TO SECURITY PROBLEM
+  RESULT CODES:
+ 
+        2014
+     SECURE
+     PROGRAM HAS BEEN TERMINATED. PLEASE CHECK YOUT INPUT
+
+     *************************
+     OVERVIEW REACTION VOLUMES
+     *************************
+
+     Stream          | T       CH4    C2H4   C3H6   C4H*   C5+    KeyC       P
+     ----------------| [C]     [.......weight fractions.......]   Dec [kgf/cm2]
+     Radiant coil in |-273.150 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  0.000
+     Radiant coil out|-273.150 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  0.000
+     TLE volume   out|-273.150 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  0.000
+     --------------------------------------------------------------------------
+
+                                                           * * *   * * *
+                                                          *     * *     *
+     EFPS - VER. 6    REV.08 K.S.9306                    * P Y R O T E C *
+     ********************************                     *     * *     *
+     COPYRIGHT  -  2006  TECHNIP BENELUX B.V.              * * *   * * *
+
+     CLIENT   : TOTAL PETROCHEMICALS RESEARCH FELUY - EFPS 6                
+     JOB NAME :                                         
+     ACCOUNT  :                    USER    :                 
+     DATE     : DEC 31, 2345       TIME    : 25:00:00
+
+
+
+
+
+     ECHO PRINT OF INPUT DATA
+     ************************
+
+
+    1 :  KEYW=&SPYRO
+    2 :      USER=&TPRF
+    3 :      ACCOUNT=&MJ
+    4 :      JOBNAME=&SPYRO/ETHANE/FURNACE/NC3
+    5 :  KEYW=&TOPF
+    6 :  KEYW=&INPUT
+    7 :      UNIT=0
+    8 :  KEYW=&OUTPUT
+    9 :      UNIT=0, NOUT=2, DTM=0
+   10 :  KEYW=&TYPE
+   11 :      TYPE=1, NSTEP=2, ITMAX=10, DAYS=1
+   12 :  KEYW=&TITLE
+   13 :      TITLE=&B100/Ethane/for/TRA/Off/gases/study/2010
+   14 :  KEYW=&SPEC
+   15 :      KEYC=&C2H6, CONOP=5, CONVAL=55, TOLER=0.0001, XADIA=0.1
+   16 :  KEYW=&GEOM
+   17 :      NTUBE=1, DIAM=0.1207, TUBEL=7.50, THICK=0.0076, SPLIT=1, STAG=1,*
+   18 :      PITCH=1.870, ABRES=20, COKEL=0.0005, HCOE=1, FRIC=1.25
+   19 :  KEYW=&GEOM
+   20 :      NTUBE=7, DIAM=0.1207, TUBEL=6.7, THICK=0.0076, SPLIT=1, STAG=1,*
+   21 :      PITCH=1.870, ABRES=20, COKEL=0.0025, HCOE=1, FRIC=1.25
+   22 :  KEYW=&GEOM
+   23 :      NTUBE=5, DIAM=0.1207, TUBEL=6.7, THICK=0.0076, SPLIT=1, STAG=1,*
+   24 :      PITCH=1.87, ABRES=20, COKEL=0.005, HCOE=1, FRIC=1.25, FLUXP=0.1,*
+   25 :      TEMPO=825, TRVOL=80
+   26 :  KEYW=&RATE
+   27 :      FLOWR=3250, STEAM=975, TEMPI=662.0, POUT=2.25, FOULC=0.0001, PARCO=1.0
+   28 :  KEYW=&FEED
+   29 :      IPO=1, COKAD=1.0
+   30 :  KEYW=&NAME
+   31 :     B2M2=0.17335214674460792, BENZ=1.673049788349123, XILO=1.2477323120338641, C1
+   32 :  KEYW=&ENDF
+
+
+     CALCULATIONS FINALIZED
+     **********************
+
+
