@@ -35,8 +35,21 @@ def main():
         spyro_data[i].feed_composition.transform_naphtha_feed()
         spyro_data[i].write_spyro()
 
+    #     for spyro_simulation_nr in spyro_data:
+    #         spyro_data[spyro_simulation_nr].run_spyro()
     for spyro_simulation_nr in spyro_data:
-        spyro_data[spyro_simulation_nr].run_spyro()
+        spyro_sim = spyro_data[spyro_simulation_nr]
+        print(
+            "reading effluent data for simulation                {}".format(
+                spyro_sim.get_file_name()
+            )
+        )
+        spyro_sim.effluent_composition.read_effluent(
+            spyro_sim.get_folder_location(), spyro_sim.get_file_name()
+        )
+
+    test = spyro_data[0].effluent_composition.effluent["wt"]
+    print(test)
 
 
 if __name__ == "__main__":
