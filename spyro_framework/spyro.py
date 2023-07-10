@@ -150,6 +150,7 @@ class SpyroData:
         naphtha_line_string
             String in the SPYRO format, ecf or dat
         """
+        import textwrap
 
         print("writing naphtha input line.")
         self.naphtha_line_string = ""
@@ -157,17 +158,20 @@ class SpyroData:
         if ecf_dat == "dat":
             # create .dat file input
             self.naphtha_line_string += "KEYW=&NAME\n"
-            self.naphtha_line_string += (
-                "   "
-                + ", ".join(
-                    "{}={:}".format(
-                        key,
-                        value,
-                    )
-                    for key, value in feed_comp_wt_dct.items()
+            substring = ""
+            substring2 = ", ".join(
+                "{}={:05f}".format(
+                    key,
+                    value,
                 )
-                + ", END"
+                for key, value in feed_comp_wt_dct.items()
             )
+            lines = textwrap.wrap(substring2, 72, break_long_words=False)
+            for line in lines:
+                substring += "    {}*\n".format(line)
+            self.naphtha_line_string += substring[:-2]
+            self.naphtha_line_string += ", END"
+
         elif ecf_dat == "ecf":
             # create .ecf file input
             self.naphtha_line_string += "[NAME]\n"
