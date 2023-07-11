@@ -26,6 +26,8 @@ class SpyroData:
         self.folder_location = folder_location
         # Class that has all information on the feed composition
         self.feed_composition = FeedComposition()
+        # Class that has all information with regard to the converging criteria
+        self.convergence = Convergence()
         # Class that has all information on the effluent composition
         self.effluent_composition = EffluentComposition()
         # Create the output container class for spyro
@@ -76,6 +78,53 @@ class SpyroData:
     def set_spyro_exe_location(self, spyro_exe_location):
         self.spyro_exe_location = spyro_exe_location
 
+    def change_feed_composition(self, spyro_input_string):
+        """Change feed composition"""
+        import re
+
+        feed_replacement_string = self.create_naphtha_line()
+        spyro_input_string = re.sub(
+            "KEYW=&NAME\n[\s\S]*, END",
+            feed_replacement_string,
+            spyro_input_string,
+        )
+        return spyro_input_string
+
+    def change_convergence_target(self, spyro_input_string):
+        import re
+
+        target = self.convergence.target
+        target_value = self.convergence.target_value
+        spyro_input_string = re.sub(
+            "CONOP=[0-9]",
+            "CONOP={}".format(target),
+            spyro_input_string,
+        )
+
+        target_value_keyword = {
+            1: "TEMPO",  # COT
+            2: "CONVAL",  # C3/ethylene ratio
+            3: "CONVAL",  # P/E ratio
+            4: "CONVAL",  # M/P ratio
+            5: "CONVAL",  # Decomposition key component
+            6: "CONVAL",  # total absorbed heat duty
+        }
+
+        if self.convergence.target in [1]:
+            spyro_input_string = re.sub(
+                "{}=[^,]*".format(target_value_keyword[target]),
+                "{}={}".format(target_value_keyword[target], target_value),
+                spyro_input_string,
+            )
+        else:
+            spyro_input_string = re.sub(
+                "{}=[^,]*".format(target_value_keyword[target]),
+                "{}={}".format(target_value_keyword[target], target_value),
+                spyro_input_string,
+            )
+
+        return spyro_input_string
+
     def write_spyro(self):
         import os
         import re
@@ -100,11 +149,13 @@ class SpyroData:
         # find the keywords to change with the data in self
         file_to_change = open("{}.dat".format(self.get_file_name()), "r")
         f_str = file_to_change.read()
-        feed_replacement_string = self.create_naphtha_line()
-        f_str = re.sub(
-            "KEYW=&NAME\n[\s\S]*, END", feed_replacement_string, f_str
-        )
+        # Modify feed composition part
+        f_str = self.change_feed_composition(f_str)
+        # Modify conversion target
+        f_str = self.change_convergence_target(f_str)
+        # Close the reading file
         file_to_change.close()
+
         # overwrite the base file with the new feed line
         file_changed = open("{}.dat".format(self.get_file_name()), "w")
         file_changed.write(f_str)
@@ -189,6 +240,20 @@ class SpyroData:
             )
 
         return self.naphtha_line_string
+
+
+class Convergence:
+    def __init__(self):
+        """Constructor
+
+        Parameters
+        ----------
+
+        Objects
+        -------
+        """
+        self.target = 5  # represent COT convergence criteria
+        self.target_value = 1.2
 
 
 class FeedComposition:
@@ -652,7 +717,8 @@ class FireboxData:
 
     def read_firebox(self, folder_location, file_name, verbose=False):
         """
-        Read the firebox output from a Spyro output file and return it as a DataFrame.
+        Read the firebox output from a Spyro output file and return it as a
+        DataFrame.
 
         Parameters
         ----------

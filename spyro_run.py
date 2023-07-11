@@ -57,12 +57,10 @@ def main():
         spyro_sim.firebox.read_firebox(
             spyro_sim.get_folder_location(), spyro_sim.get_file_name()
         )
-        effluent[
-            spyro_sim.get_file_name()
-        ] = spyro_sim.effluent_composition.effluent["wt"]
-        general[
-            spyro_sim.get_file_name()
-        ] = spyro_sim.general_spyro.get_general()
+        effluent[spyro_sim.get_file_name()] = spyro_sim.effluent_composition.effluent[
+            "wt"
+        ]
+        general[spyro_sim.get_file_name()] = spyro_sim.general_spyro.get_general()
         firebox[
             spyro_sim.get_file_name()
         ] = spyro_sim.firebox.get_firebox_perf_summary()
