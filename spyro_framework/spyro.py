@@ -28,8 +28,12 @@ class SpyroData:
         self.feed_composition = FeedComposition()
         # Class that has all information on the effluent composition
         self.effluent_composition = EffluentComposition()
+        # Create the output container class for spyro
+        self.general_spyro = SpyroGeneralOutput()
+        # Create the output container class for firebox
+        self.firebox = FireboxData()
         # String where the exe file of Spyro is located
-        self.spyro_exe_location = r"C:\\Program Files (x86)\\Pyrotec\\EFPS86\\"
+        self.spyro_exe_location = r"C:\Program Files (x86)\Pyrotec\EFPS86"
         # Spyro exe name
         self.spyro_exe_name = r"EFPS68.exe"
         # Exact name for spyro execution
@@ -82,6 +86,7 @@ class SpyroData:
 
         # copy the example file in the folder location with new folder and name
         src = os.path.join(self.base_folder, "base.dat")
+        src_pyro_ini = os.path.join(self.base_folder, "Pyrotec.ini")
         dst = os.path.join(
             self.file_name_folder, "{}.dat".format(self.get_file_name())
         )
@@ -89,13 +94,16 @@ class SpyroData:
         if not os.path.exists(self.file_name_folder):
             os.mkdir(self.file_name_folder)
         shutil.copy2(src, dst)
+        shutil.copy(src_pyro_ini, self.file_name_folder)
         os.chdir(self.file_name_folder)
 
         # find the keywords to change with the data in self
         file_to_change = open("{}.dat".format(self.get_file_name()), "r")
         f_str = file_to_change.read()
         feed_replacement_string = self.create_naphtha_line()
-        f_str = re.sub("KEYW=&NAME\n.*END", feed_replacement_string, f_str)
+        f_str = re.sub(
+            "KEYW=&NAME\n[\s\S]*, END", feed_replacement_string, f_str
+        )
         file_to_change.close()
         # overwrite the base file with the new feed line
         file_changed = open("{}.dat".format(self.get_file_name()), "w")
@@ -534,3 +542,237 @@ def read_naphtha_spyro_converter(file_name, log=False):
     print("Converter file saved.")
 
     return nafta_converter
+
+
+class SpyroGeneralOutput:
+    def __init__(self):
+        import pandas as pd
+
+        self.general = pd.DataFrame()
+
+    def get_general(self):
+        return self.general
+
+    def read_general(self, folder_location, file_name, verbose=False):
+        """
+        Read the general output from a Spyro output file and return it as
+        DataFrame.
+
+        Parameters
+        ----------
+        folder_location : str
+            The folder location where the Spyro output file is located.
+        file_name : str
+            The name of the Spyro output file.
+        verbose : bool, optional
+            Whether to print verbose output, by default False.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame containing the extracted data.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the provided file_path does not exist.
+        """
+        import os
+
+        import pandas as pd
+
+        folder_file_name = os.path.join(
+            os.path.join(folder_location, file_name),
+            "{}.eof".format(file_name),
+        )
+
+        with open(folder_file_name, "r") as output_file:
+            section = None
+            for line in output_file:
+                line = line.strip()
+                if line.startswith("[SPYROGENERAL]"):
+                    section = "SPYROGENERAL"
+                elif line.startswith("[SPYROGENERAL END]"):
+                    section = None
+                elif section == "SPYROGENERAL":
+                    splits = line.split()
+                    parameters = splits[::2]
+                    values = splits[1::2]
+
+        df = pd.Series(values, index=parameters)
+        df = df.astype("float64")
+
+        # Rename the columns for df
+        column_mapping = {
+            "CIT": "Coil inlet temperature [°C]",
+            "TXADIA": "Outlet temperature at measuring point [°C]",
+            # "SURINS": "Transferline volume outlet temperature [°C]",
+            "TMT": "Tube no. TMT",
+            "MAXSKIN": "Maximum skin temperature [°C]",
+            "COKRATE": "Coking rate at location of max TMT [mm/month]",
+            "INLETP": "Coil inlet pressure [kgf/cm²]",
+            "PRESSDR": "Pressure drop [kgf/cm²]",
+            "OUTLETP": "Coil outlet pressure [kgf/cm²]",
+            "MASSFL": "Feed flow per coil [kg/h]",
+            "DSRATIO": "Steam dilution ratio [-]",
+            "VELOLI": "Coil outlet linear velocity [m/s]",
+            "VELOMA": "Coil outlet mass velocity [kg/m²s]",
+            #         "": "Residence time up to coil outlet [s]",
+            #         "": "Residence time including transfer line volume [s]",
+            #         "": "Resulting convergence value [°C]",
+            "TEMPWA": "Radiant wall temperature [°C]",
+            "TEMPGA": "Radiant gas temperature [°C]",
+            "TEMPCO": "Average correction of process temperature [°C]",
+            "AVTMT": "Fourth power average tube skin temperature [°C]",
+            "TOTDUT": "Total thermal duty transferred [kcal/h]",
+            "HEATFA": "Average heat flux (clean int. surface) [kcal/m²h]",
+            "COKVOL": "Total coil coke volume [dm³]",
+            "VOLINS": "Total coil inside volume [dm³]",
+            "SURINS": "Total coil inside surface [m²]",
+            "SUROUT": "Total coil outside surface [m²]",
+            "COILWE": "Total coil weight [kg]",
+        }
+        df = df.rename(index=column_mapping)
+
+        if verbose:
+            print("Spyro General Data and misc:")
+            print(df)
+
+        self.general = df
+
+
+class FireboxData:
+    def __init__(self):
+        import pandas as pd
+
+        self.firebox_perf_summary = pd.DataFrame()
+
+    def get_firebox_perf_summary(self):
+        return self.firebox_perf_summary
+
+    def read_firebox(self, folder_location, file_name, verbose=False):
+        """
+        Read the firebox output from a Spyro output file and return it as a DataFrame.
+
+        Parameters
+        ----------
+        folder_location : str
+            The folder location where the Spyro output file is located.
+        file_name : str
+            The name of the Spyro output file.
+        verbose : bool, optional
+            Whether to print verbose output, by default False.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame containing the extracted data.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the provided file_path does not exist.
+        """
+        import os
+
+        import pandas as pd
+
+        folder_file_name = os.path.join(
+            os.path.join(folder_location, file_name),
+            "{}.eof".format(file_name),
+        )
+
+        with open(folder_file_name, "r") as output_file:
+            firebox_present = False
+            perform_section = False
+            data = []
+
+            for line in output_file:
+                line = line.strip()
+
+                if line.startswith("[FIREBOX]"):
+                    firebox_present = True
+
+                if firebox_present and line.startswith("[PERFORM]"):
+                    perform_section = True
+                    continue
+
+                if perform_section:
+                    if line.startswith("["):
+                        break
+                    else:
+                        data.append(line)
+
+        if not firebox_present:
+            print(
+                "Warning: [FIREBOX] section not found in the file."
+                "No data was parsed."
+            )
+            return None
+
+        splits = data[0].split()
+        parameters = splits[::2]
+        values = splits[1::2]
+
+        df = pd.Series(values, index=parameters)
+        df = df.astype("float64")
+
+        # Rename the columns for df
+        column_mapping = {
+            "EFFIFH": "Radiant box efficiency on fired heat [%]",
+            "TOTFGF": "Total flue gas flow [kg/h]",
+            "EFFIRH": "Radiant box efficiency on released heat [%]",
+            "HENTFG": "Enthalpy of flue gas leaving radiant box [kcal/h]",
+            "HEATF": "Fired heat based on LHV [kcal/h]",
+            "HEATR": "Released heat based on LHV [kcal/h]",
+            "HEATA": "Heat absorbed by tubes [kcal/h]",
+            "HEATL": "Calculated heat losses in the radiant box [kcal/h]",
+            "HEATO": "Heat leak through flue gas opening [kcal/h]",
+            "HLEFT": "Bridge wall heat losses [kcal/h]",
+            "BRDGTA": "Flue gas bridge temperature (average) [°C]",
+            "BRDGTO": "Flue gas bridge temperature (overall) [°C]",
+            "RBHEF": "Radiant box efficiency on fired heat [%]",
+            "FLUETOW": "Total flue gas flow [kg/h]",
+            "RBHER": "Radiant box efficiency on released heat [%]",
+            "GASFSB": "Fuel gas flow [kg/h] (Side firing)",
+            "GASFBB": "Fuel gas flow [kg/h] (Bottom firing)",
+            "OILFSB": "Fuel oil flow [kg/h] (Side firing)",
+            "OILFBB": "Fuel oil flow [kg/h] (Bottom firing)",
+            "COMFSB": "Combustion air flow [kg/h] (Side firing)",
+            "COMFBB": "Combustion air flow [kg/h] (Bottom firing)",
+            "EXHFSB": "Gas turbine exhaust air flow [kg/h] (Side firing)",
+            "EXHFBB": "Gas turbine exhaust air flow [kg/h] (Bottom firing)",
+            "FLUECO2": "Carbon dioxide [mol%] (Flue gas)",
+            "FLUEH2O": "Water (moisture) [mol%] (Flue gas)",
+            "FLUEO2": "Oxygen [mol%] (Flue gas)",
+            "FLUEN2": "Nitrogen [mol%] (Flue gas)",
+            "FLUESO2": "Sulphur dioxide [mol%] (Flue gas)",
+            "FLUEAR": "Argon [mol%] (Flue gas)",
+            "AIRCO2": "Carbon dioxide [mol%] (Combustion Air)",
+            "AIRH2O": "Water (moisture) [mol%] (Combustion Air)",
+            "AIRO2": "Oxygen [mol%] (Combustion Air)",
+            "AIRN2": "Nitrogen [mol%] (Combustion Air)",
+            "AIRAR": "Argon [mol%] (Combustion Air)",
+            "EXTCO2": "Carbon dioxide [mol%] (Exhaust)",
+            "EXTH2O": "Water (moisture) [mol%] (Exhaust)",
+            "EXTO2": "Oxygen [mol%] (Exhaust)",
+            "EXTN2": "Nitrogen [mol%] (Exhaust)",
+            "EXTAR": "Argon [mol%] (Exhaust)",
+            "AIRAMW": "Molecular weight [kg/kmol] (Combustion Air)",
+            "AIRTOM": "Total flow [kmol/h] (Combustion Air)",
+            "AIRTOW": "Total flow [kg/h] (Combustion Air)",
+            "EXTAMW": "Molecular weight [kg/kmol] (Exhaust)",
+            "EXTTOM": "Total flow [kmol/h] (Exhaust)",
+            "EXTTOW": "Total flow [kg/h] (Exhaust)",
+            "FLUEAMW": "Molecular weight [kg/kmol] (Flue gas)",
+            "FLUETOM": "Total flow [kmol/h] (Flue gas)",
+            "BRDGLO": "Bridge wall heat losses [kcal/h]",
+        }
+
+        df = df.rename(index=column_mapping)
+
+        if verbose:
+            print("Firebox Data:")
+            print(df)
+
+        self.firebox_perf_summary = df
