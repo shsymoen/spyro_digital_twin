@@ -33,7 +33,7 @@ def main():
             feed_pitagor=feed_comp_test, feed_converter=naphtha_converter
         )
         spyro_data[i].feed_composition.transform_naphtha_feed()
-        spyro_data[i].write_spyro()
+    #     spyro_data[i].write_spyro()
 
     #     for spyro_simulation_nr in spyro_data:
     #         spyro_data[spyro_simulation_nr].run_spyro()
@@ -57,10 +57,12 @@ def main():
         spyro_sim.firebox.read_firebox(
             spyro_sim.get_folder_location(), spyro_sim.get_file_name()
         )
-        effluent[spyro_sim.get_file_name()] = spyro_sim.effluent_composition.effluent[
-            "wt"
-        ]
-        general[spyro_sim.get_file_name()] = spyro_sim.general_spyro.get_general()
+        effluent[
+            spyro_sim.get_file_name()
+        ] = spyro_sim.effluent_composition.effluent["wt"]
+        general[
+            spyro_sim.get_file_name()
+        ] = spyro_sim.general_spyro.get_general()
         firebox[
             spyro_sim.get_file_name()
         ] = spyro_sim.firebox.get_firebox_perf_summary()
