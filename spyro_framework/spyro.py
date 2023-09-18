@@ -710,6 +710,8 @@ class FireboxData:
     def __init__(self):
         import pandas as pd
 
+        self.firebox_present = False
+        self.perform_section = False
         self.firebox_perf_summary = pd.DataFrame()
 
     def get_firebox_perf_summary(self):
@@ -749,27 +751,25 @@ class FireboxData:
         )
 
         with open(folder_file_name, "r") as output_file:
-            firebox_present = False
-            perform_section = False
             data = []
 
             for line in output_file:
                 line = line.strip()
 
                 if line.startswith("[FIREBOX]"):
-                    firebox_present = True
+                    self.firebox_present = True
 
-                if firebox_present and line.startswith("[PERFORM]"):
-                    perform_section = True
+                if self.firebox_present and line.startswith("[PERFORM]"):
+                    self.perform_section = True
                     continue
 
-                if perform_section:
+                if self.perform_section:
                     if line.startswith("["):
                         break
                     else:
                         data.append(line)
 
-        if not firebox_present:
+        if not self.firebox_present:
             print(
                 "Warning: [FIREBOX] section not found in the file."
                 "No data was parsed."

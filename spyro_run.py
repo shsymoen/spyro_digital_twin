@@ -63,13 +63,15 @@ def main():
         general[
             spyro_sim.get_file_name()
         ] = spyro_sim.general_spyro.get_general()
-        firebox[
-            spyro_sim.get_file_name()
-        ] = spyro_sim.firebox.get_firebox_perf_summary()
+        if spyro_sim.firebox.firebox_present:
+            firebox[
+                spyro_sim.get_file_name()
+            ] = spyro_sim.firebox.get_firebox_perf_summary()
+        else:
+            firebox[spyro_sim.get_file_name()] = None
 
     effluent = pd.DataFrame(effluent)
     general = pd.DataFrame(general)
-    firebox = pd.DataFrame(firebox)
 
     print(effluent)
     print(general)
